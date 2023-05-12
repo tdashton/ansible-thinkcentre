@@ -3,3 +3,5 @@ all:
     your_host1:
     your_host2:
     your_host3:
+  vars:
+    remote_user: user

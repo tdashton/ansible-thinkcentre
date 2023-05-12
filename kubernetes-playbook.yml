@@ -1,7 +1,7 @@
 ---
 - name: Add podman
   hosts: all
-  remote_user: {{ ssh_user }}
+  remote_user: "{{ remote_user }}"
 
   tasks:
   - name: Install latest base packages - jq, tmux, curl

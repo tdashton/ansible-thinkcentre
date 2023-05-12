@@ -1,0 +1,74 @@
+---
+- name: Add podman
+  hosts: all
+  remote_user: {{ ssh_user }}
+
+  tasks:
+  - name: Install latest base packages - jq, tmux, curl
+    become: yes
+    ansible.builtin.apt:
+      name:
+        - curl
+        - jq
+        - tmux
+      state: latest
+  - name: Install latest version of podman
+    become: yes
+    ansible.builtin.apt:
+      name: podman
+      state: latest
+  - name: Install latest version promotheus node exporter
+    become: yes
+    ansible.builtin.apt:
+      name:
+        - prometheus-node-exporter
+        - prometheus-node-exporter-collectors
+      state: latest
+  - name: Install containerd apt repository
+    become: yes
+    ansible.builtin.shell: |
+      echo \
+      "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/trusted.gpg.d/docker.gpg] https://download.docker.com/linux/debian \
+      "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+      tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - name: Install containerd apt repository key
+    become: yes
+    ansible.builtin.shell: |
+      if [ ! -f /etc/apt/trusted.gpg.d/docker.gpg ]; then curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg; else true; fi;
+  - name: Install containerd
+    become: yes
+    ansible.builtin.apt:
+      update_cache: true
+      name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io=1.6.21-1
+        - docker-buildx-plugin
+        - docker-compose-plugin
+      state: latest
+  - name: Enable containerd cri plugin
+    become: yes
+    ansible.builtin.shell: sed -ie 's/^disabled_plugins/#disabled_plugins/' /etc/containerd/config.toml
+  - name: Restart containerd w/ new config
+    become: yes
+    ansible.builtin.systemd:
+      state: restarted
+      daemon_reload: true
+      name: containerd
+  - name: Install kubernetes apt repository
+    become: yes
+    ansible.builtin.shell: |
+      echo "deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  - name: Install kubernetes apt repository key
+    become: yes
+    ansible.builtin.shell: |
+      if [ ! -f /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg ]; then curl -fsSLo /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg; else true; fi;
+  - name: Install k8s
+    become: yes
+    ansible.builtin.apt:
+      update_cache: true
+      name:
+        - kubelet=1.27.0-00
+        - kubeadm=1.27.0-00
+        - kubectl=1.27.0-00
+      state: latest

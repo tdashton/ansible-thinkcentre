@@ -1,0 +1,5 @@
+all:
+  hosts:
+    your_host1:
+    your_host2:
+    your_host3:
